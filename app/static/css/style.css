@@ -1,0 +1,293 @@
+/* School Management System — warm, readable theme */
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap");
+
+:root {
+    --bg: #f8f6f3;
+    --surface: #ffffff;
+    --surface-hover: #faf9f7;
+    --primary: #1a5f4a;
+    --primary-hover: #134736;
+    --primary-light: #e8f2ef;
+    --accent: #c17f59;
+    --accent-hover: #a86a47;
+    --text: #2d2d2d;
+    --text-muted: #5c5c5c;
+    --border: #e4dfd9;
+    --shadow: 0 2px 12px rgba(26, 95, 74, 0.06);
+    --shadow-lg: 0 8px 32px rgba(26, 95, 74, 0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font-heading: "Outfit", system-ui, sans-serif;
+    --font-body: "Source Sans 3", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    font-weight: 400;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+}
+
+.app {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+}
+
+.page-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: -0.02em;
+    color: var(--primary);
+    margin: 0 0 2rem;
+    text-align: center;
+}
+
+.section-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text);
+    margin: 0 0 1rem;
+}
+
+.card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 2rem;
+}
+
+.form-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    align-items: end;
+}
+
+.form-add {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.form-add .btn {
+    grid-column: 1 / -1;
+    justify-self: center;
+}
+
+@media (max-width: 640px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    .form-add .btn {
+        justify-self: center;
+    }
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+input[type="text"],
+select {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+input[type="text"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+input[type="text"]::placeholder {
+    color: #9a9a9a;
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235c5c5c' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+}
+
+.btn {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.65rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        transform 0.1s;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+}
+
+.table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    background: var(--surface);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    margin: 0;
+    color: var(--text-muted);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+thead {
+    background: var(--primary);
+    color: #fff;
+}
+
+th {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    text-align: center;
+    padding: 0.9rem 1.25rem;
+}
+
+td {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+}
+
+tbody tr:hover {
+    background: var(--surface-hover);
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.actions a {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+
+.actions a.link-edit {
+    color: var(--primary);
+}
+
+.actions a.link-edit:hover {
+    background: var(--primary-light);
+    color: var(--primary-hover);
+}
+
+.actions a.link-delete {
+    color: #b53d3d;
+}
+
+.actions a.link-delete:hover {
+    background: #fce8e8;
+    color: #8b2a2a;
+}
+
+.actions a .icon {
+    display: inline-block;
+    width: 1.15rem;
+    height: 1.15rem;
+    vertical-align: middle;
+}
+
+.edit-form .form-grid {
+    grid-template-columns: 1fr 1fr 1fr auto;
+}
+
+@media (max-width: 640px) {
+    .edit-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    margin-bottom: 1.25rem;
+    transition: color 0.2s;
+}
+
+.back-link:hover {
+    color: var(--primary);
+}
+
+.back-link::before {
+    content: "←";
+}
