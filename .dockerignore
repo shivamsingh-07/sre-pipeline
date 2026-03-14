@@ -1,0 +1,14 @@
+.git
+.env
+.venv
+venv
+env
+__pycache__
+*.pyc
+.pytest_cache
+.gitignore
+.dockerignore
+README.md
+Makefile
+conftest.py
+tests

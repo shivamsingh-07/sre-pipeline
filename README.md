@@ -21,6 +21,7 @@ A Flask-based **School Management System** exposing a versioned REST API and a s
 - **Python 3.10+**
 - **MySQL** (for running the app against a real database; not needed for tests)
 - **Make** (optional; you can run equivalent commands manually)
+- **Docker** (optional; for building and running the containerized app)
 
 ## Local setup
 
@@ -93,6 +94,74 @@ pytest tests/ -v
 ```
 
 Tests use an in-memory SQLite database; no MySQL or `.env` is required.
+
+## Docker
+
+### Build the image
+
+From the project root:
+
+```bash
+docker build -t sre-pipeline .
+```
+
+Use a specific tag if you prefer:
+
+```bash
+docker build -t sre-pipeline:1.0 .
+```
+
+### Run the container
+
+The app listens on port 5000 inside the container. Map it to the host and pass the database URL:
+
+```bash
+docker run -d \
+  --name sre-pipeline \
+  -p 5000:5000 \
+  -e DATABASE_URI="mysql+pymysql://USER:PASSWORD@host.docker.internal:3306/DBNAME" \
+  sre-pipeline
+```
+
+- **`-p 5000:5000`** — maps container port 5000 to host 5000. Use `-p 8080:5000` to expose the app on host port 8080.
+- **`-e DATABASE_URI=...`** — required. Use `host.docker.internal` (Docker Desktop on Mac/Windows) or your host’s IP so the container can reach MySQL on the host. On Linux you may need `--add-host=host.docker.internal:host-gateway` or the host network IP.
+
+Optional environment variables:
+
+```bash
+docker run -d \
+  --name sre-pipeline \
+  -p 5000:5000 \
+  -e DATABASE_URI="mysql+pymysql://user:pass@host.docker.internal:3306/school" \
+  -e PORT=5000 \
+  -e LOG_LEVEL=INFO \
+  sre-pipeline
+```
+
+**Using a `.env` file** (Docker does not load `.env` by default; pass vars explicitly or use `--env-file`):
+
+```bash
+# Create a file (e.g. docker.env) with:
+# DATABASE_URI=mysql+pymysql://...
+# LOG_LEVEL=INFO
+
+docker run -d --name sre-pipeline -p 5000:5000 --env-file docker.env sre-pipeline
+```
+
+**Apply migrations** before or after starting the container (run a one-off command in the same image):
+
+```bash
+docker run --rm --env-file docker.env sre-pipeline flask db upgrade
+```
+
+Then open **http://localhost:5000/** for the web UI and **http://localhost:5000/api/v1/healthcheck** to verify the API.
+
+**Stop and remove the container:**
+
+```bash
+docker stop sre-pipeline
+docker rm sre-pipeline
+```
 
 ## API overview
 
