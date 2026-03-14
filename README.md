@@ -18,10 +18,111 @@ A Flask-based **School Management System** exposing a versioned REST API and a s
 
 ## Prerequisites
 
-- **Python 3.10+**
-- **MySQL** (for running the app against a real database; not needed for tests)
-- **Make** (optional; you can run equivalent commands manually)
-- **Docker** (optional; for building and running the containerized app)
+The following must be installed before using this project. Requirements depend on how you run the app (local vs Docker).
+
+### For local development (Makefile / Python)
+
+| Tool        | Required | Notes |
+| ----------- | -------- | ----- |
+| **Python**  | Yes      | 3.10 or newer. Check with `python3 --version`. |
+| **Make**    | Yes      | Used to run `make build`, `make run`, `make test`, etc. Check with `make --version`. On Windows you can use WSL, Git Bash, or install [Make for Windows](https://gnuwin32.sourceforge.net/packages/make.htm). |
+| **MySQL**   | Optional | Required only if the app uses a MySQL `DATABASE_URI`. Not needed for running tests (tests use in-memory SQLite). |
+
+### For Docker (docker-compose / docker build)
+
+| Tool           | Required | Notes |
+| -------------- | -------- | ----- |
+| **Docker**     | Yes      | Engine and CLI. Check with `docker --version`. |
+| **Docker Compose** | Yes  | v2 or later (e.g. `docker compose`). Check with `docker compose version`. |
+| **Make**       | Optional | Convenient for wrapping `docker compose`; not required if you run `docker compose` directly. |
+
+### For running tests only
+
+- **Python 3.10+** and **Make** (or run `pytest tests/ -v` manually after installing dependencies). No MySQL or Docker required.
+
+## Make targets and order of execution
+
+Use these targets in the order below depending on what you want to do.
+
+### First-time local setup and run
+
+1. **`make build`** — Create `.venv`, install dependencies, and run migrations if the database is available. Run this first.
+2. **`make migrate`** — (Optional) Run again if migrations failed during build or you added new migrations. Requires `DATABASE_URI` in `.env`.
+3. **`make run`** — Start the Flask app. Use after build (and migrate if needed).
+
+```bash
+make build
+make migrate   # if DB is set and you need to apply migrations
+make run
+```
+
+### Running tests
+
+1. **`make build`** — Ensures the venv and dependencies exist.
+2. **`make test`** — Run the test suite. Does not require MySQL or `.env`.
+
+```bash
+make build
+make test
+```
+
+### After changing dependencies
+
+1. **`make install`** — Reinstall from `requirements.txt` (assumes `.venv` already exists from a previous `make build`).
+
+### After changing the database schema (models)
+
+1. **`make migrate`** — Apply pending migrations. Generate new ones locally with `flask db migrate -m "message"` then run `make migrate`.
+
+### Clean slate (remove venv and caches)
+
+1. **`make clean`** — Remove `.venv`, `__pycache__`, `.pytest_cache`, and the local `migrations/` directory. Use before a fresh `make build` if you want to start over.
+
+```bash
+make clean
+make build
+make run
+```
+
+### Docker (docker-compose)
+
+Use these targets when running the app and MySQL via Docker. Requires **Docker** and **Docker Compose** (see Prerequisites).
+
+1. **`make docker-build`** — Build the app image (and pull the DB image if needed). Run first or after changing the app or `Dockerfile`.
+2. **`make docker-up`** — Start the stack in the background (DB + app). The app waits for the DB to be healthy, runs migrations, then listens on port 5000.
+3. **`make docker-logs`** — (Optional) Stream app logs. Use `Ctrl+C` to stop.
+4. **`make docker-down`** — Stop and remove the containers when finished.
+
+```bash
+make docker-build
+make docker-up
+# Open http://localhost:5000/
+make docker-logs   # optional
+make docker-down   # when done
+```
+
+**Useful:** `make docker-ps` lists running containers and their status.
+
+### Summary table (local)
+
+| Order | Target          | When to use |
+| ----- | ---------------- | ----------- |
+| 1     | `make build`     | First time, or after clone / clean. |
+| 2     | `make migrate`   | When you have a DB and need to apply migrations. |
+| 3     | `make run`       | Start the app (after build). |
+| —     | `make test`      | Run tests (after build). |
+| —     | `make install`   | After changing `requirements.txt`. |
+| —     | `make clean`     | When you want to remove venv and caches. |
+
+### Summary table (Docker)
+
+| Order | Target             | When to use |
+| ----- | ------------------ | ----------- |
+| 1     | `make docker-build` | First time, or after changing app / Dockerfile. |
+| 2     | `make docker-up`    | Start app + DB. |
+| —     | `make docker-logs`  | Stream app logs. |
+| —     | `make docker-ps`   | List containers. |
+| —     | `make docker-down`  | Stop and remove containers. |
 
 ## Local setup
 
@@ -188,15 +289,20 @@ Open **http://localhost:5000/** in a browser to use the web interface. It talks 
 
 ## Makefile targets
 
-| Target            | Description                                                                  |
-| ----------------- | ---------------------------------------------------------------------------- |
-| `make build`      | Create `.venv`, install dependencies, run `flask db upgrade` (if DB is set). |
-| `make install`    | Install dependencies only (assumes venv exists).                             |
-| `make migrate`    | Run `flask db upgrade`.                                                      |
-| `make run`        | Start the app with `flask run --debug`.                                      |
-| `make run-python` | Start the app with `python run.py`.                                          |
-| `make test`       | Run `pytest tests/ -v`.                                                      |
-| `make clean`      | Remove `.venv`, `__pycache__`, `.pytest_cache`, and `migrations/`.           |
+| Target               | Description                                                                  |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `make build`         | Create `.venv`, install dependencies, run `flask db upgrade` (if DB is set). |
+| `make install`       | Install dependencies only (assumes venv exists).                             |
+| `make migrate`       | Run `flask db upgrade`.                                                      |
+| `make run`           | Start the app with `flask run --debug`.                                      |
+| `make run-python`    | Start the app with `python run.py`.                                          |
+| `make test`          | Run `pytest tests/ -v`.                                                      |
+| `make clean`         | Remove `.venv`, `__pycache__`, `.pytest_cache`, and `migrations/`.           |
+| `make docker-build`  | Build app (and DB) images with docker compose.                               |
+| `make docker-up`     | Start app + DB in background (`docker compose up -d`).                       |
+| `make docker-down`   | Stop and remove containers.                                                 |
+| `make docker-logs`   | Stream app container logs (`docker compose logs -f app`).                    |
+| `make docker-ps`     | List running compose containers.                                             |
 
 ## Project structure
 

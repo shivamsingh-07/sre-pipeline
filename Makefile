@@ -1,4 +1,4 @@
-.PHONY: build run install migrate test clean
+.PHONY: build run install migrate test clean docker-build docker-up docker-down docker-logs docker-ps
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -39,3 +39,23 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name migrations -exec rm -rf {} + 2>/dev/null || true
+
+# Docker: build images
+docker-build:
+	docker compose build
+
+# Docker: start app + DB in background
+docker-up:
+	docker compose up -d
+
+# Docker: stop and remove containers
+docker-down:
+	docker compose down
+
+# Docker: follow app logs
+docker-logs:
+	docker compose logs -f app
+
+# Docker: list running containers
+docker-ps:
+	docker compose ps
