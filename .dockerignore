@@ -12,3 +12,5 @@ README.md
 Makefile
 conftest.py
 tests
+docker-compose.yaml
+.github

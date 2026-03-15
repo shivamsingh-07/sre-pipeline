@@ -1,0 +1,52 @@
+name: Docker Image CI Integration
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "app/**"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.14"
+
+      - name: Installing dependencies
+        run: make build
+
+      - name: Linting the code
+        run: make lint
+
+      - name: Running the tests
+        run: make test
+
+  build:
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/sre-pipeline:latest .
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/sre-pipeline:latest

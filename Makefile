@@ -1,4 +1,4 @@
-.PHONY: build run install migrate test clean docker-build docker-up docker-down docker-logs docker-ps
+.PHONY: build run install migrate test lint ci clean docker-build docker-up docker-down docker-logs docker-ps
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -10,7 +10,20 @@ build:
 	python3 -m venv $(VENV)
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
-	$(FLASK) db upgrade 2>/dev/null || true
+
+# Lint: run static checks (requires build first)
+lint:
+	$(VENV)/bin/ruff check app run.py tests conftest.py
+	$(VENV)/bin/ruff format --check app run.py tests conftest.py
+
+# Test: run unit tests (requires build first)
+test:
+	$(VENV)/bin/pytest tests/ -v
+
+# CI: run all stages in order (build → lint → test)
+ci: build
+	$(MAKE) lint
+	$(MAKE) test
 
 # Install deps only (assumes venv exists)
 install:
@@ -19,10 +32,6 @@ install:
 # Run migrations
 migrate:
 	$(FLASK) db upgrade
-
-# Run unit tests
-test:
-	$(VENV)/bin/pytest tests/ -v
 
 # Run the REST API locally
 run:
