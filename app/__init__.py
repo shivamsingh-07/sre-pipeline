@@ -10,12 +10,16 @@ from app.web import web_bp
 from app.api.v1 import api_v1
 
 # Migrations folder at project root (parent of app/)
-MIGRATIONS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "migrations"))
+MIGRATIONS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "migrations")
+)
 
 
 def configure_logging(app: Flask) -> None:
     """Configure app logger with format and level."""
-    level = getattr(logging, (os.environ.get("LOG_LEVEL", "INFO")).upper(), logging.INFO)
+    level = getattr(
+        logging, (os.environ.get("LOG_LEVEL", "INFO")).upper(), logging.INFO
+    )
     fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"
     logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
