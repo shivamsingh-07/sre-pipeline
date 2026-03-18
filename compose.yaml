@@ -1,0 +1,58 @@
+services:
+  db:
+    image: mysql:lts
+    container_name: sre-pipeline-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: school
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app-1:
+    build: .
+    container_name: sre-pipeline-1
+    environment:
+      PORT: 8081
+      BASE_URL: http://nginx/
+      DATABASE_URI: mysql+pymysql://root:root@db:3306/school
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "(flask db upgrade || true) && python run.py"
+    restart: unless-stopped
+
+  app-2:
+    build: .
+    container_name: sre-pipeline-2
+    environment:
+      PORT: 8082
+      BASE_URL: http://nginx/
+      DATABASE_URI: mysql+pymysql://root:root@db:3306/school
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "(flask db upgrade || true) && python run.py"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    container_name: sre-pipeline-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      app-1:
+        condition: service_started
+      app-2:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
