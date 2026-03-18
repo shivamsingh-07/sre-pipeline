@@ -22,19 +22,26 @@ The following must be installed before using this project. Requirements depend o
 
 ### For local development (Makefile / Python)
 
-| Tool        | Required | Notes |
-| ----------- | -------- | ----- |
-| **Python**  | Yes      | 3.10 or newer. Check with `python3 --version`. |
-| **Make**    | Yes      | Used to run `make build`, `make run`, `make test`, etc. Check with `make --version`. On Windows you can use WSL, Git Bash, or install [Make for Windows](https://gnuwin32.sourceforge.net/packages/make.htm). |
-| **MySQL**   | Optional | Required only if the app uses a MySQL `DATABASE_URI`. Not needed for running tests (tests use in-memory SQLite). |
+| Tool       | Required | Notes                                                                                                                                                                                                         |
+| ---------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Python** | Yes      | 3.10 or newer. Check with `python3 --version`.                                                                                                                                                                |
+| **Make**   | Yes      | Used to run `make build`, `make run`, `make test`, etc. Check with `make --version`. On Windows you can use WSL, Git Bash, or install [Make for Windows](https://gnuwin32.sourceforge.net/packages/make.htm). |
+| **MySQL**  | Optional | Required only if the app uses a MySQL `DATABASE_URI`. Not needed for running tests (tests use in-memory SQLite).                                                                                              |
 
 ### For Docker (docker-compose / docker build)
 
-| Tool           | Required | Notes |
-| -------------- | -------- | ----- |
-| **Docker**     | Yes      | Engine and CLI. Check with `docker --version`. |
-| **Docker Compose** | Yes  | v2 or later (e.g. `docker compose`). Check with `docker compose version`. |
-| **Make**       | Optional | Convenient for wrapping `docker compose`; not required if you run `docker compose` directly. |
+| Tool               | Required | Notes                                                                                        |
+| ------------------ | -------- | -------------------------------------------------------------------------------------------- |
+| **Docker**         | Yes      | Engine and CLI. Check with `docker --version`.                                               |
+| **Docker Compose** | Yes      | v2 or later (e.g. `docker compose`). Check with `docker compose version`.                    |
+| **Make**           | Optional | Convenient for wrapping `docker compose`; not required if you run `docker compose` directly. |
+
+### For Vagrant (VM + Docker inside)
+
+| Tool            | Required | Notes                                                                |
+| --------------- | -------- | -------------------------------------------------------------------- |
+| **Vagrant**     | Yes      | With VirtualBox or another provider. Check with `vagrant --version`. |
+| **Vagrant box** | Yes      | `bento/ubuntu-24.04` (downloaded on first `vagrant up`).             |
 
 ### For running tests only
 
@@ -46,8 +53,8 @@ Use these targets in the order below depending on what you want to do.
 
 ### First-time local setup and run
 
-1. **`make build`** — Create `.venv`, install dependencies, and run migrations if the database is available. Run this first.
-2. **`make migrate`** — (Optional) Run again if migrations failed during build or you added new migrations. Requires `DATABASE_URI` in `.env`.
+1. **`make build`** — Create `.venv` and install dependencies. Run this first.
+2. **`make migrate`** — (Optional) Apply migrations. Requires `DATABASE_URI` in `.env`. Run after build when using a DB.
 3. **`make run`** — Start the Flask app. Use after build (and migrate if needed).
 
 ```bash
@@ -84,45 +91,45 @@ make build
 make run
 ```
 
-### Docker (docker-compose)
+### Docker (compose.yaml)
 
-Use these targets when running the app and MySQL via Docker. Requires **Docker** and **Docker Compose** (see Prerequisites).
+Use these targets when running the stack via Docker Compose. Requires **Docker** and **Docker Compose** (see Prerequisites). The stack uses **`compose.yaml`**: 2 API containers (app-1, app-2), 1 MySQL DB, 1 Nginx load balancer. Only Nginx is exposed (port **8080**); app ports stay private.
 
-1. **`make docker-build`** — Build the app image (and pull the DB image if needed). Run first or after changing the app or `Dockerfile`.
-2. **`make docker-up`** — Start the stack in the background (DB + app). The app waits for the DB to be healthy, runs migrations, then listens on port 5000.
-3. **`make docker-logs`** — (Optional) Stream app logs. Use `Ctrl+C` to stop.
-4. **`make docker-down`** — Stop and remove the containers when finished.
+1. **`make docker-build`** — Build app images (and pull DB/Nginx images if needed). Run first or after changing the app or `Dockerfile`.
+2. **`make docker-up`** — Start the stack in the background (`docker compose up -d` with `compose.yaml`).
+3. **`make docker-logs`** — (Optional) Stream logs. Use `make docker-logs app-1` or leave default for all services.
+4. **`make docker-down`** — Stop and remove the containers.
 
 ```bash
 make docker-build
 make docker-up
-# Open http://localhost:5000/
+# API and Web UI at http://localhost:8080 (Nginx load-balances between 2 API containers)
 make docker-logs   # optional
 make docker-down   # when done
 ```
 
-**Useful:** `make docker-ps` lists running containers and their status.
+**Useful:** `make docker-ps` lists running containers. The Makefile uses `docker compose` (Compose v2), which picks up **`compose.yaml`** by default.
 
 ### Summary table (local)
 
-| Order | Target          | When to use |
-| ----- | ---------------- | ----------- |
-| 1     | `make build`     | First time, or after clone / clean. |
-| 2     | `make migrate`   | When you have a DB and need to apply migrations. |
-| 3     | `make run`       | Start the app (after build). |
-| —     | `make test`      | Run tests (after build). |
-| —     | `make install`   | After changing `requirements.txt`. |
-| —     | `make clean`     | When you want to remove venv and caches. |
+| Order | Target         | When to use                                      |
+| ----- | -------------- | ------------------------------------------------ |
+| 1     | `make build`   | First time, or after clone / clean.              |
+| 2     | `make migrate` | When you have a DB and need to apply migrations. |
+| 3     | `make run`     | Start the app (after build).                     |
+| —     | `make test`    | Run tests (after build).                         |
+| —     | `make install` | After changing `requirements.txt`.               |
+| —     | `make clean`   | When you want to remove venv and caches.         |
 
 ### Summary table (Docker)
 
-| Order | Target             | When to use |
-| ----- | ------------------ | ----------- |
+| Order | Target              | When to use                                     |
+| ----- | ------------------- | ----------------------------------------------- |
 | 1     | `make docker-build` | First time, or after changing app / Dockerfile. |
-| 2     | `make docker-up`    | Start app + DB. |
-| —     | `make docker-logs`  | Stream app logs. |
-| —     | `make docker-ps`   | List containers. |
-| —     | `make docker-down`  | Stop and remove containers. |
+| 2     | `make docker-up`    | Start stack (2 API + DB + Nginx).               |
+| —     | `make docker-logs`  | Stream logs.                                    |
+| —     | `make docker-ps`    | List containers.                                |
+| —     | `make docker-down`  | Stop and remove containers.                     |
 
 ## Local setup
 
@@ -141,6 +148,10 @@ Create a `.env` file in the project root:
 # Required for app + migrations (use SQLite for quick local try)
 DATABASE_URI=mysql+pymysql://USER:PASSWORD@localhost/DBNAME
 
+# Optional: base URL for web UI to call the API (default: same host as request)
+# Set in Docker/compose when web calls API via Nginx, e.g. BASE_URL=http://nginx
+API_BASE_URL=
+
 # Optional
 LOG_LEVEL=INFO
 ```
@@ -151,14 +162,15 @@ For a **quick local run without MySQL**, you can point the app at SQLite by sett
 DATABASE_URI=sqlite:///local.db
 ```
 
-(You may need to run migrations once; see below.)
+(You may need to run migrations once; see below.) The web UI uses **`API_BASE_URL`** (or **`BASE_URL`** in compose) to reach the API; if unset, it uses the current request host.
 
 ### 3. Build and run
 
 Using the Makefile (recommended):
 
 ```bash
-make build    # creates .venv, installs deps, runs migrations if DB is available
+make build    # creates .venv, installs deps
+make migrate  # optional: apply migrations if DATABASE_URI is set
 make run      # starts the API (Flask debug server)
 ```
 
@@ -255,7 +267,7 @@ docker run -d --name sre-pipeline -p 5000:5000 --env-file docker.env sre-pipelin
 docker run --rm --env-file docker.env sre-pipeline flask db upgrade
 ```
 
-Then open **http://localhost:5000/** for the web UI and **http://localhost:5000/api/v1/healthcheck** to verify the API.
+Then open **http://localhost:5000/** for the web UI and **http://localhost:5000/api/v1/healthcheck** to verify the API. When using **compose.yaml** (2 API + Nginx), use **http://localhost:8080** instead (Nginx is the only public port).
 
 **Stop and remove the container:**
 
@@ -285,24 +297,40 @@ curl -X POST http://localhost:5000/api/v1/students \
 
 ## Web UI
 
-Open **http://localhost:5000/** in a browser to use the web interface. It talks to the same API to list, add, edit, and delete students.
+Open **http://localhost:5000/** (single app) or **http://localhost:8080/** (compose stack with Nginx) in a browser. The web UI calls the API (via **API_BASE_URL** / **BASE_URL** when set, e.g. in containers) to list, add, edit, and delete students.
+
+## Vagrant
+
+The **Vagrantfile** spins up a VM (bento/ubuntu-24.04), provisions it (apt update/upgrade, Docker via https://get.docker.com, add vagrant to docker group), and runs **`docker compose -f /vagrant/compose.yaml up -d`** so the full stack (2 API + 1 DB + 1 Nginx) runs inside the VM. The project directory is synced to `/vagrant`.
+
+**Prerequisites:** Vagrant, VirtualBox (or another provider).
+
+```bash
+vagrant up
+# API and Web UI: http://localhost:8080 (if port 8080 is forwarded) or use the VM’s private_network IP (e.g. http://10.0.0.10:8080)
+vagrant halt   # when done
+```
+
+The Vagrantfile uses a **private network** (e.g. `10.0.0.10`). To access the app from the host, either forward port 8080 in the Vagrantfile (`config.vm.network "forwarded_port", guest: 8080, host: 8080`) or use the VM IP and port 8080.
 
 ## Makefile targets
 
-| Target               | Description                                                                  |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `make build`         | Create `.venv`, install dependencies, run `flask db upgrade` (if DB is set). |
-| `make install`       | Install dependencies only (assumes venv exists).                             |
-| `make migrate`       | Run `flask db upgrade`.                                                      |
-| `make run`           | Start the app with `flask run --debug`.                                      |
-| `make run-python`    | Start the app with `python run.py`.                                          |
-| `make test`          | Run `pytest tests/ -v`.                                                      |
-| `make clean`         | Remove `.venv`, `__pycache__`, `.pytest_cache`, and `migrations/`.           |
-| `make docker-build`  | Build app (and DB) images with docker compose.                               |
-| `make docker-up`     | Start app + DB in background (`docker compose up -d`).                       |
-| `make docker-down`   | Stop and remove containers.                                                 |
-| `make docker-logs`   | Stream app container logs (`docker compose logs -f app`).                    |
-| `make docker-ps`     | List running compose containers.                                             |
+| Target              | Description                                                        |
+| ------------------- | ------------------------------------------------------------------ |
+| `make build`        | Create `.venv` and install dependencies.                           |
+| `make install`      | Install dependencies only (assumes venv exists).                   |
+| `make migrate`      | Run `flask db upgrade`.                                            |
+| `make run`          | Start the app with `flask run --debug`.                            |
+| `make run-python`   | Start the app with `python run.py`.                                |
+| `make test`         | Run `pytest tests/ -v`.                                            |
+| `make lint`         | Run ruff check and format check.                                   |
+| `make ci`           | Run build, then lint, then test.                                   |
+| `make clean`        | Remove `.venv`, `__pycache__`, `.pytest_cache`, and `migrations/`. |
+| `make docker-build` | Build images with `docker compose` (uses `compose.yaml`).          |
+| `make docker-up`    | Start stack (2 API + DB + Nginx) in background.                    |
+| `make docker-down`  | Stop and remove containers.                                        |
+| `make docker-logs`  | Stream compose logs.                                               |
+| `make docker-ps`    | List running compose containers.                                   |
 
 ## Project structure
 
@@ -321,14 +349,20 @@ sre-pipeline/
 │   │   └── student.py
 │   ├── templates/        # Jinja2 for web UI
 │   └── static/           # CSS, etc.
+├── nginx/
+│   └── nginx.conf        # load balancer for 2 API containers (committed)
 ├── migrations/           # Flask-Migrate (Alembic) scripts
 ├── tests/
 │   ├── conftest.py       # pytest fixtures (app, client)
 │   └── test_api_v1.py    # API unit tests
 ├── .env                  # local env (not committed)
 ├── conftest.py           # root pytest conftest
+├── compose.yaml          # 2 API + 1 DB + 1 Nginx; only port 8080 exposed
+├── docker-compose.yaml   # alternate Compose file (same stack)
 ├── run.py                # entry point
 ├── requirements.txt
 ├── Makefile
+├── Vagrantfile           # VM provision (Docker, then docker compose up)
+├── Dockerfile
 └── README.md
 ```

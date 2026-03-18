@@ -1,5 +1,6 @@
 """Web UI routes (HTML pages). Calls API v1 endpoints via HTTP."""
 
+import os
 import requests
 from flask import Blueprint, render_template, request, redirect
 
@@ -9,8 +10,8 @@ API_PREFIX = "/api/v1"
 
 
 def _api_url(path: str) -> str:
-    """Build full URL for API call (same host as current request)."""
-    base = request.host_url.rstrip("/")
+    """Build full URL for API call. Uses API_BASE_URL env or current request host."""
+    base = os.environ.get("BASE_URL", request.host_url.rstrip("/"))
     return f"{base}{API_PREFIX}{path}"
 
 
