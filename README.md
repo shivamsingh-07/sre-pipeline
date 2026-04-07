@@ -47,6 +47,14 @@ The following must be installed before using this project. Requirements depend o
 
 - **Python 3.10+** and **Make** (or run `pytest tests/ -v` manually after installing dependencies). No MySQL or Docker required.
 
+### For Kubernetes (Helm + manifests)
+
+| Tool           | Required | Notes                                                                      |
+| -------------- | -------- | -------------------------------------------------------------------------- |
+| **Kubernetes** | Yes      | Any conformant cluster; the repo includes a **Minikube** helper script.    |
+| **kubectl**    | Yes      | Configured to talk to your cluster.                                        |
+| **Helm**       | Yes      | v3. Used to install **HashiCorp Vault** and **External Secrets Operator**. |
+
 ## Make targets and order of execution
 
 Use these targets in the order below depending on what you want to do.
@@ -276,6 +284,103 @@ docker stop sre-pipeline
 docker rm sre-pipeline
 ```
 
+## Kubernetes deployment
+
+The `kubernetes/` manifests and `scripts/deploy-k8s-stack.sh` deploy the app stack with **MySQL** (StatefulSet), **Flask** (Deployment + Service), **Vault** (dev mode via Helm) for secrets, and **External Secrets Operator** to sync Vault data into the `school-app-secrets` Kubernetes Secret (including a templated **`DATABASE_URI`**).
+
+### What gets deployed
+
+| Component                | Namespace          | Role                                                                                                                  |
+| ------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Vault (dev)              | `vault`            | KV store at `secret/student-app` (`username`, `password`); Kubernetes auth role `student-app` for SA `vault-auth-sa`. |
+| External Secrets         | `external-secrets` | Controller that reads Vault and creates in-cluster Secrets.                                                           |
+| App + DB + ESO resources | `student-api`      | Namespace, ServiceAccount for Vault auth, SecretStore, ExternalSecret, MySQL StatefulSet, Flask Deployment/Service.   |
+
+**Node labels:** Pods use `nodeSelector` — **`type: application`** for the Flask app and **`type: database`** for MySQL. Label at least one node each way (the Minikube script below does this).
+
+### Option A — Minikube (matches `scripts/cluster.sh`)
+
+1. Install [Minikube](https://minikube.sigs.k8s.io/docs/start/), **kubectl**, and **Helm**.
+
+2. Create (or start) the profile **`sre-pipeline`** with labeled workers:
+
+    ```bash
+    ./scripts/cluster.sh create    # first time: 4 nodes, labels application / database / dependent_services
+    # or, later:
+    ./scripts/cluster.sh start
+    ```
+
+3. From the **`scripts/`** directory, run the full bootstrap (Helm releases + Vault policy/role + apply manifests):
+
+    ```bash
+    cd scripts
+    ./deploy-k8s-stack.sh
+    ```
+
+    The script expects paths like `../kubernetes/` (run it only from `scripts/`).
+
+4. Open the API (pick one):
+
+    ```bash
+    # Minikube (replace profile if you use a different -p name)
+    minikube service school-app-service -n student-api -p sre-pipeline
+    ```
+
+    Or port-forward:
+
+    ```bash
+    kubectl port-forward -n student-api svc/school-app-service 5000:5000
+    # then http://localhost:5000
+    ```
+
+### Option B — Any Kubernetes cluster
+
+1. Ensure **Helm** can install cluster-wide resources and **kubectl** points at the target cluster.
+
+2. Label nodes so scheduling succeeds:
+
+    ```bash
+    kubectl label node <your-app-node> type=application --overwrite
+    kubectl label node <your-db-node> type=database --overwrite
+    ```
+
+3. Run the same automation from **`scripts/`**:
+
+    ```bash
+    cd scripts && ./deploy-k8s-stack.sh
+    ```
+
+    Or apply manually in order:
+
+    ```bash
+    # After Helm installs Vault + External Secrets (see deploy-k8s-stack.sh for exact helm commands):
+    kubectl apply -f kubernetes/roles.yaml
+    # Configure Vault: enable kubernetes auth, policy, auth config, role, and KV secret — mirror the
+    # vault exec / vault write / vault kv put steps in scripts/deploy-k8s-stack.sh
+    kubectl apply -f kubernetes/secrets.yaml
+    kubectl apply -f kubernetes/database.yaml
+    kubectl wait --for=condition=Ready pods -l app=school-database -n student-api --timeout=120s
+    kubectl apply -f kubernetes/application.yaml
+    ```
+
+### After deploy — checks
+
+```bash
+kubectl get pods -n student-api
+kubectl get externalsecret -n student-api   # should become Ready; populates school-app-secrets
+kubectl describe secretstore vault-store -n student-api
+kubectl get secret school-app-secrets -n student-api
+```
+
+- **Health:** `GET /api/v1/healthcheck` on the app Service URL.
+- **ExternalSecret stuck:** Confirm Vault is unsealed (dev chart is auto-unsealed), the `student-app` Kubernetes auth role allows SA **`vault-auth-sa`** in namespace **`student-api`**, and the KV path **`secret/student-app`** exists with `username` and `password`.
+
+### Customization
+
+- **Container image:** `kubernetes/application.yaml` uses **`abstergo07/sre-pipeline`**. Build and push your own image, then update the Deployment `image` fields (init container and main container).
+- **Vault data:** `deploy-k8s-stack.sh` seeds demo credentials with `vault kv put secret/student-app`. Change these for non-demo environments.
+- **ClusterRoleBinding:** `kubernetes/roles.yaml` creates **`role-tokenreview-binding`** (cluster-scoped). If the name collides with another release, rename it in the manifest.
+
 ## API overview
 
 | Method      | Endpoint                | Description                                       |
@@ -359,6 +464,8 @@ sre-pipeline/
 ├── conftest.py           # root pytest conftest
 ├── compose.yaml          # 2 API + 1 DB + 1 Nginx; only port 8080 exposed
 ├── docker-compose.yaml   # alternate Compose file (same stack)
+├── kubernetes/           # K8s manifests (namespace, app, DB, Vault/ESO integration)
+├── scripts/              # cluster.sh (Minikube), deploy-k8s-stack.sh (Helm + apply)
 ├── run.py                # entry point
 ├── requirements.txt
 ├── Makefile

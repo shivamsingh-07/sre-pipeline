@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: school-app-config
+  namespace: student-api
+data:
+  BASE_URL: http://school-app-service.student-api.svc.cluster.local:5000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: school-app-deployment
+  namespace: student-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: school-app
+  template:
+    metadata:
+      labels:
+        app: school-app
+    spec:
+      nodeSelector:
+        type: application
+      initContainers:
+        - name: migration-container
+          image: abstergo07/sre-pipeline
+          command:
+            - sh
+            - -c
+            - flask db upgrade
+          env:
+            - name: BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: school-app-config
+                  key: BASE_URL
+            - name: DATABASE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: school-app-secrets
+                  key: DATABASE_URI
+      containers:
+        - name: school-app-container
+          image: abstergo07/sre-pipeline
+          ports:
+            - containerPort: 5000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: school-app-config
+          env:
+            - name: DATABASE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: school-app-secrets
+                  key: DATABASE_URI
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: school-app-service
+  namespace: student-api
+spec:
+  selector:
+    app: school-app
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000

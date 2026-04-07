@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: school-database-config
+  namespace: student-api
+data:
+  MYSQL_DATABASE: school
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: school-database
+  namespace: student-api
+spec:
+  serviceName: school-database-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: school-database
+  template:
+    metadata:
+      labels:
+        app: school-database
+    spec:
+      nodeSelector:
+        type: database
+      containers:
+        - name: school-database-container
+          image: mysql:lts
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: school-app-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: school-app-secrets
+                  key: DB_USERNAME
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: school-app-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: school-database-config
+                  key: MYSQL_DATABASE
+          volumeMounts:
+            - name: mysql-pvc
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-pvc
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: school-database-service
+  namespace: student-api
+spec:
+  selector:
+    app: school-database
+  ports:
+    - port: 3306
+      targetPort: 3306
+      name: mysql
