@@ -2,12 +2,13 @@
 
 import logging
 import os
+
 from flask import Flask
 
+from app.api.v1 import api_v1
 from app.config import Config
 from app.extensions import db, migrate
 from app.web import web_bp
-from app.api.v1 import api_v1
 
 # Migrations folder at project root (parent of app/)
 MIGRATIONS_DIR = os.path.abspath(

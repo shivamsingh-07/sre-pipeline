@@ -1,8 +1,9 @@
 """Web UI routes (HTML pages). Calls API v1 endpoints via HTTP."""
 
 import os
+
 import requests
-from flask import Blueprint, render_template, request, redirect
+from flask import Blueprint, redirect, render_template, request
 
 web_bp = Blueprint("web", __name__)
 

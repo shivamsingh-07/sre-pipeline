@@ -1,7 +1,8 @@
 """API v1 routes — REST students resource."""
 
 import logging
-from flask import request, jsonify
+
+from flask import jsonify, request
 
 from app.extensions import db
 from app.models import Student
