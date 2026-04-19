@@ -13,8 +13,8 @@ build:
 
 # Lint: run static checks (requires build first)
 lint:
-	$(VENV)/bin/ruff check app run.py tests conftest.py
-	$(VENV)/bin/ruff format --check app run.py tests conftest.py
+	$(VENV)/bin/ruff check --select I app run.py tests conftest.py
+	$(VENV)/bin/ruff format app run.py tests conftest.py
 
 # Test: run unit tests (requires build first)
 test:

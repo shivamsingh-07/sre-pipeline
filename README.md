@@ -11,7 +11,7 @@ A Flask-based **School Management System** exposing a versioned REST API and a s
 ## Features
 
 - **API versioning:** All API routes under `/api/v1/` (e.g. `/api/v1/students`, `/api/v1/healthcheck`).
-- **Database:** SQLAlchemy with MySQL (PyMySQL driver); configurable via `DATABASE_URI`.
+- **Database:** SQLAlchemy with MySQL (PyMySQL driver); the URI is built from **`DB_USERNAME`**, **`DB_PASSWORD`**, **`DB_HOSTNAME`** (MySQL host and port as `host:port`), and **`DB_NAME`** using the **`mysql+pymysql`** scheme. If **`DB_HOSTNAME`** has no port, **`3306`** is appended.
 - **Migrations:** Flask-Migrate (Alembic) for schema changes; run with `flask db upgrade`.
 - **Tests:** Pytest with in-memory SQLite; no MySQL required for unit tests.
 - **Logging:** Configurable log level via `LOG_LEVEL`; API requests and errors logged with appropriate levels.
@@ -26,7 +26,7 @@ The following must be installed before using this project. Requirements depend o
 | ---------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Python** | Yes      | 3.10 or newer. Check with `python3 --version`.                                                                                                                                                                |
 | **Make**   | Yes      | Used to run `make build`, `make run`, `make test`, etc. Check with `make --version`. On Windows you can use WSL, Git Bash, or install [Make for Windows](https://gnuwin32.sourceforge.net/packages/make.htm). |
-| **MySQL**  | Optional | Required only if the app uses a MySQL `DATABASE_URI`. Not needed for running tests (tests use in-memory SQLite).                                                                                              |
+| **MySQL**  | Optional | Required only if you set the `DB_*` variables for a MySQL-backed run. Not needed for running tests (tests use in-memory SQLite).                                                                                              |
 
 ### For Docker (docker-compose / docker build)
 
@@ -62,7 +62,7 @@ Use these targets in the order below depending on what you want to do.
 ### First-time local setup and run
 
 1. **`make build`** — Create `.venv` and install dependencies. Run this first.
-2. **`make migrate`** — (Optional) Apply migrations. Requires `DATABASE_URI` in `.env`. Run after build when using a DB.
+2. **`make migrate`** — (Optional) Apply migrations. Requires the `DB_*` variables in `.env` when using MySQL. Run after build when using a DB.
 3. **`make run`** — Start the Flask app. Use after build (and migrate if needed).
 
 ```bash
@@ -153,8 +153,11 @@ cd sre-pipeline
 Create a `.env` file in the project root:
 
 ```bash
-# Required for app + migrations (use SQLite for quick local try)
-DATABASE_URI=mysql+pymysql://USER:PASSWORD@localhost/DBNAME
+# Required for app + migrations against MySQL (password may contain special characters; it is URL-encoded)
+DB_USERNAME=USER
+DB_PASSWORD=PASSWORD
+DB_HOSTNAME=localhost:3306
+DB_NAME=DBNAME
 
 # Optional: base URL for web UI to call the API (default: same host as request)
 # Set in Docker/compose when web calls API via Nginx, e.g. BASE_URL=http://nginx
@@ -164,13 +167,7 @@ API_BASE_URL=
 LOG_LEVEL=INFO
 ```
 
-For a **quick local run without MySQL**, you can point the app at SQLite by setting in `.env`:
-
-```bash
-DATABASE_URI=sqlite:///local.db
-```
-
-(You may need to run migrations once; see below.) The web UI uses **`API_BASE_URL`** (or **`BASE_URL`** in compose) to reach the API; if unset, it uses the current request host.
+Unit tests inject SQLite via `create_app` overrides; you do not need the `DB_*` variables for **`make test`**. The web UI uses **`API_BASE_URL`** (or **`BASE_URL`** in compose) to reach the API; if unset, it uses the current request host.
 
 ### 3. Build and run
 
@@ -178,7 +175,7 @@ Using the Makefile (recommended):
 
 ```bash
 make build    # creates .venv, installs deps
-make migrate  # optional: apply migrations if DATABASE_URI is set
+make migrate  # optional: apply migrations if DB_* env vars are set
 make run      # starts the API (Flask debug server)
 ```
 
@@ -195,7 +192,7 @@ flask run --debug           # or: python run.py
 
 ### 4. Migrations (first time or after schema changes)
 
-If you use MySQL or SQLite and have run `flask db upgrade` at least once, the `student` table is created. To generate new migrations after changing models:
+If you use MySQL and have run `flask db upgrade` at least once, the `student` table is created. To generate new migrations after changing models:
 
 ```bash
 flask db migrate -m "description"
@@ -234,18 +231,21 @@ docker build -t sre-pipeline:1.0 .
 
 ### Run the container
 
-The app listens on port 5000 inside the container. Map it to the host and pass the database URL:
+The app listens on port 5000 inside the container. Map it to the host and pass database settings:
 
 ```bash
 docker run -d \
   --name sre-pipeline \
   -p 5000:5000 \
-  -e DATABASE_URI="mysql+pymysql://USER:PASSWORD@host.docker.internal:3306/DBNAME" \
+  -e DB_USERNAME=USER \
+  -e DB_PASSWORD=PASSWORD \
+  -e DB_HOSTNAME=host.docker.internal:3306 \
+  -e DB_NAME=DBNAME \
   sre-pipeline
 ```
 
 - **`-p 5000:5000`** — maps container port 5000 to host 5000. Use `-p 8080:5000` to expose the app on host port 8080.
-- **`-e DATABASE_URI=...`** — required. Use `host.docker.internal` (Docker Desktop on Mac/Windows) or your host’s IP so the container can reach MySQL on the host. On Linux you may need `--add-host=host.docker.internal:host-gateway` or the host network IP.
+- **`DB_HOSTNAME`** — MySQL address as `host:port`. Use `host.docker.internal:3306` (Docker Desktop on Mac/Windows) or your host’s IP with port so the container can reach MySQL on the host. On Linux you may need `--add-host=host.docker.internal:host-gateway` or the host network IP.
 
 Optional environment variables:
 
@@ -253,7 +253,10 @@ Optional environment variables:
 docker run -d \
   --name sre-pipeline \
   -p 5000:5000 \
-  -e DATABASE_URI="mysql+pymysql://user:pass@host.docker.internal:3306/school" \
+  -e DB_USERNAME=user \
+  -e DB_PASSWORD=pass \
+  -e DB_HOSTNAME=host.docker.internal:3306 \
+  -e DB_NAME=school \
   -e PORT=5000 \
   -e LOG_LEVEL=INFO \
   sre-pipeline
@@ -263,7 +266,7 @@ docker run -d \
 
 ```bash
 # Create a file (e.g. docker.env) with:
-# DATABASE_URI=mysql+pymysql://...
+# DB_USERNAME=... DB_PASSWORD=... DB_HOSTNAME=host:3306 DB_NAME=...
 # LOG_LEVEL=INFO
 
 docker run -d --name sre-pipeline -p 5000:5000 --env-file docker.env sre-pipeline
@@ -286,7 +289,7 @@ docker rm sre-pipeline
 
 ## Kubernetes deployment
 
-The `kubernetes/` manifests and `scripts/deploy-k8s-stack.sh` deploy the app stack with **MySQL** (StatefulSet), **Flask** (Deployment + Service), **Vault** (dev mode via Helm) for secrets, and **External Secrets Operator** to sync Vault data into the `school-app-secrets` Kubernetes Secret (including a templated **`DATABASE_URI`**).
+The `kubernetes/` manifests and `scripts/deploy-k8s-stack.sh` deploy the app stack with **MySQL** (StatefulSet), **Flask** (Deployment + Service), **Vault** (dev mode via Helm) for secrets, and **External Secrets Operator** to sync Vault data into the `school-app-secrets` Kubernetes Secret (**`DB_USERNAME`** / **`DB_PASSWORD`**), while **`DB_HOSTNAME`** and **`DB_NAME`** come from the app ConfigMap.
 
 ### What gets deployed
 

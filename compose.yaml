@@ -5,11 +5,13 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: root
       MYSQL_DATABASE: school
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-proot" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,7 +22,10 @@ services:
     environment:
       PORT: 8081
       BASE_URL: http://nginx/
-      DATABASE_URI: mysql+pymysql://root:root@db:3306/school
+      DB_USERNAME: admin
+      DB_PASSWORD: root
+      DB_HOSTNAME: db:3306
+      DB_NAME: school
     depends_on:
       db:
         condition: service_healthy
@@ -33,7 +38,10 @@ services:
     environment:
       PORT: 8082
       BASE_URL: http://nginx/
-      DATABASE_URI: mysql+pymysql://root:root@db:3306/school
+      DB_USERNAME: admin
+      DB_PASSWORD: root
+      DB_HOSTNAME: db:3306
+      DB_NAME: school
     depends_on:
       db:
         condition: service_healthy

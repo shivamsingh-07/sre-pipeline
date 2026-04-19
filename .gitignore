@@ -4,3 +4,4 @@ __pycache__/
 .vagrant/
 .venv/
 .env
+*.tgz

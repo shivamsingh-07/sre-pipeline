@@ -10,10 +10,10 @@ cluster_exists() {
 
 create_cluster() {
 	echo "🚀 Creating 4-node cluster (1 master + 3 workers)..."
-	minikube start -p $PROFILE --nodes 4 --memory 2048
+	minikube start -p $PROFILE --nodes 4 --memory 2048 --cni=cilium
 
 	echo "⏳ Waiting for nodes to be ready..."
-	kubectl wait --for=condition=Ready nodes --all --timeout=60s
+	kubectl wait --for=condition=Ready nodes --all --timeout=180s
 
 	echo "🏷️ Labeling worker nodes..."
 	kubectl label node ${PROFILE}-m02 node-role.kubernetes.io/worker=worker type=application

@@ -5,6 +5,7 @@ metadata:
   namespace: student-api
 data:
   BASE_URL: http://school-app-service.student-api.svc.cluster.local:5000
+  DB_HOSTNAME: school-database-service.student-api.svc.cluster.local:3306
 
 ---
 apiVersion: apps/v1
@@ -32,31 +33,41 @@ spec:
             - -c
             - flask db upgrade
           env:
-            - name: BASE_URL
+            - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: school-app-config
-                  key: BASE_URL
-            - name: DATABASE_URI
-              valueFrom:
-                secretKeyRef:
-                  name: school-app-secrets
-                  key: DATABASE_URI
+                  name: school-database-config
+                  key: MYSQL_DATABASE
+          envFrom:
+            - configMapRef:
+                name: school-app-config
+            - secretRef:
+                name: school-app-secrets
       containers:
         - name: school-app-container
           image: abstergo07/sre-pipeline
           ports:
             - containerPort: 5000
               name: http
-          envFrom:
-            - configMapRef:
-                name: school-app-config
           env:
-            - name: DATABASE_URI
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: school-database-config
+                  key: MYSQL_DATABASE
+            - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: school-app-secrets
-                  key: DATABASE_URI
+                  key: MYSQL_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: school-app-secrets
+                  key: MYSQL_PASSWORD
+          envFrom:
+            - configMapRef:
+                name: school-app-config
 
 ---
 apiVersion: v1
@@ -65,6 +76,7 @@ metadata:
   name: school-app-service
   namespace: student-api
 spec:
+  type: LoadBalancer
   selector:
     app: school-app
   ports:

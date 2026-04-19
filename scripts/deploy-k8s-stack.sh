@@ -50,7 +50,8 @@ kubectl exec -i vault-0 -n vault -- vault write auth/kubernetes/role/student-app
 
 kubectl exec -i vault-0 -n vault -- vault kv put secret/student-app \
 	username="admin" \
-	password="root"
+	password="root" \
+	root_password="root"
 
 kubectl apply -f ../kubernetes/secrets.yaml
 kubectl apply -f ../kubernetes/database.yaml
