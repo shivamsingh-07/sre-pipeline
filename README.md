@@ -6,7 +6,7 @@ A Flask-based **School Management System** exposing a versioned REST API and a s
 
 - **REST API (v1):** CRUD for students, healthcheck, structured logging, and unit tests.
 - **Web UI:** Browser interface that uses the API to list, add, edit, and delete students.
-- **SRE-friendly:** Makefile for build/run/test, DB migrations (Flask-Migrate), healthcheck endpoint, and config via environment variables.
+- **SRE-friendly:** Makefile, Helm support, DB migrations (Flask-Migrate), healthcheck endpoint, and config via environment variables.
 
 ## Features
 
@@ -15,6 +15,7 @@ A Flask-based **School Management System** exposing a versioned REST API and a s
 - **Migrations:** Flask-Migrate (Alembic) for schema changes; run with `flask db upgrade`.
 - **Tests:** Pytest with in-memory SQLite; no MySQL required for unit tests.
 - **Logging:** Configurable log level via `LOG_LEVEL`; API requests and errors logged with appropriate levels.
+- **Helm Chart:** Ready-to-use Helm chart for deploying the full stack (App + MySQL) on Kubernetes.
 
 ## Prerequisites
 
@@ -53,7 +54,7 @@ The following must be installed before using this project. Requirements depend o
 | -------------- | -------- | -------------------------------------------------------------------------- |
 | **Kubernetes** | Yes      | Any conformant cluster; the repo includes a **Minikube** helper script.    |
 | **kubectl**    | Yes      | Configured to talk to your cluster.                                        |
-| **Helm**       | Yes      | v3. Used to install **HashiCorp Vault** and **External Secrets Operator**. |
+| **Helm**       | Yes      | v3. Used to install the app chart and dependent services (**Vault**, **ESO**). |
 
 ## Make targets and order of execution
 
@@ -366,6 +367,39 @@ The `kubernetes/` manifests and `scripts/deploy-k8s-stack.sh` deploy the app sta
     kubectl apply -f kubernetes/application.yaml
     ```
 
+### Option C — Helm Chart
+
+The project includes a Helm chart for simplified deployment. It packages the application, database, and necessary secret integrations.
+
+1. **Ensure Prerequisites:** Vault and External Secrets Operator must be installed (use `scripts/deploy-k8s-stack.sh` to set them up).
+
+2. **Install the chart:**
+
+    ```bash
+    helm install school-app ./helm --namespace student-api --create-namespace
+    ```
+
+3. **Verify the installation:**
+
+    ```bash
+    helm list -n student-api
+    kubectl get pods -n student-api
+    ```
+
+4. **Customization:**
+   Edit `helm/values.yaml` to change replicas, image tags, or service types. For example, to use a `NodePort` instead of `LoadBalancer`:
+
+    ```bash
+    helm upgrade school-app ./helm --set app.service.type=NodePort -n student-api
+    ```
+
+5. **Uninstall:**
+
+    ```bash
+    helm uninstall school-app -n student-api
+    ```
+
+
 ### After deploy — checks
 
 ```bash
@@ -467,6 +501,7 @@ sre-pipeline/
 ├── conftest.py           # root pytest conftest
 ├── compose.yaml          # 2 API + 1 DB + 1 Nginx; only port 8080 exposed
 ├── docker-compose.yaml   # alternate Compose file (same stack)
+├── helm/                # Helm chart for app + DB deployment
 ├── kubernetes/           # K8s manifests (namespace, app, DB, Vault/ESO integration)
 ├── scripts/              # cluster.sh (Minikube), deploy-k8s-stack.sh (Helm + apply)
 ├── run.py                # entry point

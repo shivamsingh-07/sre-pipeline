@@ -1,0 +1,16 @@
+app:
+  name: school-app
+  replicas: 3
+  port: 5000
+  service:
+    type: LoadBalancer
+  image:
+    repository: abstergo07/sre-pipeline
+    tag: latest
+
+db:
+  name: school
+  port: 3306
+  image:
+    repository: mysql
+    tag: lts

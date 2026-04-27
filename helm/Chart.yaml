@@ -1,0 +1,6 @@
+apiVersion: v2
+name: school-app
+description: Flask + MySQL school application with Vault-backed External Secrets
+type: application
+version: 0.1.6
+appVersion: "1.0.0"

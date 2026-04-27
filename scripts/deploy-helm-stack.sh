@@ -26,12 +26,10 @@ if ! helm list -n external-secrets | grep -q "external-secrets"; then
 		--wait
 fi
 
-kubectl apply -f ../kubernetes/roles.yaml
-
 kubectl exec -i vault-0 -n vault -- vault auth enable kubernetes 2>/dev/null || true
 
-kubectl exec -i vault-0 -n vault -- vault policy write student-app-policy - <<EOF
-path "secret/data/student-app" {
+kubectl exec -i vault-0 -n vault -- vault policy write school-policy - <<EOF
+path "secret/data/school-secrets" {
   capabilities = ["read"]
 }
 EOF
@@ -41,18 +39,15 @@ kubectl exec -i vault-0 -n vault -- vault write auth/kubernetes/config \
 	kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
 	token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
 
-kubectl exec -i vault-0 -n vault -- vault write auth/kubernetes/role/student-app \
+kubectl exec -i vault-0 -n vault -- vault write auth/kubernetes/role/school-secrets \
 	bound_service_account_names=vault-auth-sa \
 	bound_service_account_namespaces=student-api \
-	policies=student-app-policy \
+	policies=school-policy \
 	ttl=1h
 
-kubectl exec -i vault-0 -n vault -- vault kv put secret/student-app \
+kubectl exec -i vault-0 -n vault -- vault kv put secret/school-secrets \
 	username="admin" \
 	password="root" \
 	root_password="root"
 
-kubectl apply -f ../kubernetes/secrets.yaml
-kubectl apply -f ../kubernetes/database.yaml
-kubectl wait --for=condition=Ready pods -l app=school-database -n student-api --timeout=180s
-kubectl apply -f ../kubernetes/application.yaml
+helm upgrade --install school ./helm --namespace student-api --create-namespace
